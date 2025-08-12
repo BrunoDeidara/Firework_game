@@ -1,178 +1,170 @@
-<!doctype html>
-<html lang="pt-br">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Fogos para Crianças — Web</title>
-<meta name="theme-color" content="#090c1c" />
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-180.png" sizes="180x180">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Fogos Coloridos</title>
 <style>
-  :root { --panel-w: 132px; --gap: 8px; --btn-h: 56px; }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin: 0; padding: 0; height: 100%; background:#090c1c; color:#eef2ff;
-    touch-action: manipulation;
-    font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif;
-  }
-  #wrap { position: relative; width: 100%; height: 100%; overflow: hidden; }
-  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  #panel { position: absolute; left: env(safe-area-inset-left, 0); top: env(safe-area-inset-top, 0);
-    width: calc(var(--panel-w) + var(--gap)*2); padding: var(--gap);
-    display: flex; flex-direction: column; gap: var(--gap); z-index: 2; }
-  #mix { width: 100%; height: 42px; border-radius: 12px; border:2px solid #e5e7eb; background:#fff; }
-  .slots { display: grid; grid-template-rows: repeat(3, 36px); gap: var(--gap); }
-  .slot { height: 36px; border-radius: 10px; border:2px solid #e5e7eb; background:#fff; cursor: pointer; }
-  .slot.active { outline: 3px solid #50a6ff; }
-  .palette { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); width: 100%; }
-  .swatch { width: 100%; aspect-ratio: 1/1; border-radius: 10px; border:2px solid #e5e7eb; cursor: pointer; }
-  #buttons { position: absolute; left: 50%; transform: translateX(-50%);
-    bottom: calc(env(safe-area-inset-bottom, 0) + 10px); display: flex; gap: 10px; z-index: 2; padding: 0 10px;
-    width: 100%; justify-content: center; }
-  .btn { min-width: 140px; height: var(--btn-h); border-radius: 16px; border:2px solid #e5e7eb;
-    background:#fff; color:#1f2937; font-weight:600; font-size: 16px;
-    display:flex; align-items:center; justify-content:center; padding: 0 14px;
-    cursor: pointer; user-select: none; }
-  .btn:active { transform: translateY(1px); }
-  .btn.colorido { background:#f8fafc; }
-  .btn.surpresa { background: linear-gradient(90deg,#ff3b30,#ff9500,#ffcc00,#34c759,#007aff,#5856d6,#ff2d55);
-    color:#0b0f1a; border-color:#ffffffcc; }
-  @media (max-width: 380px) { :root { --panel-w: 120px; --btn-h: 52px; } .btn { min-width: 120px; font-size: 15px; } }
+    html, body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        height: 100%;
+        background: black;
+        display: flex;
+        flex-direction: column;
+    }
+    #controls {
+        display: flex;
+        justify-content: space-around;
+        padding: 5px;
+        background: rgba(0, 0, 0, 0.7);
+    }
+    .color-picker {
+        display: grid;
+        grid-template-columns: repeat(3, 30px);
+        gap: 5px;
+    }
+    .color-btn {
+        width: 30px;
+        height: 30px;
+        border: none;
+        cursor: pointer;
+    }
+    #result {
+        width: 30px;
+        height: 30px;
+        border: 2px solid white;
+        margin: auto;
+    }
+    #buttons {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 5px;
+    }
+    button {
+        padding: 8px 10px;
+        font-size: 14px;
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+    }
+    canvas {
+        flex: 1;
+        display: block;
+    }
 </style>
 </head>
 <body>
-<div id="wrap">
-  <canvas id="sky"></canvas>
-  <div id="panel">
-    <div id="mix"></div>
-    <div class="slots">
-      <div class="slot" id="slot1"></div>
-      <div class="slot" id="slot2"></div>
-      <div class="slot" id="slot3"></div>
-    </div>
-    <div class="palette" id="palette"></div>
-  </div>
-  <div id="buttons">
-    <div class="btn" id="btn3">Estourar 3x</div>
-    <div class="btn colorido" id="btnColorido">Colorido</div>
-    <div class="btn surpresa" id="btnSurpresa">Surpresa</div>
-  </div>
+
+<div id="controls">
+    <div class="color-picker" id="color1"></div>
+    <div class="color-picker" id="color2"></div>
+    <div class="color-picker" id="color3"></div>
+    <div id="result"></div>
 </div>
+<div id="buttons">
+    <button style="background:red; color:white;" onclick="fireworksDefault()">Estourar</button>
+    <button style="background:blue; color:white;" onclick="fireworksColorido()">Colorido</button>
+    <button style="background:green; color:white;" onclick="fireworksSurpresa()">Surpresa</button>
+</div>
+<canvas id="canvas"></canvas>
+
 <script>
-(()=> {
-  const canvas = document.getElementById('sky');
-  const ctx = canvas.getContext('2d');
-  let W=0, H=0, DPR=1;
-  function resize() {
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
-    W = Math.floor(canvas.clientWidth * DPR);
-    H = Math.floor(canvas.clientHeight * DPR);
-    canvas.width = W; canvas.height = H;
-  }
-  window.addEventListener('resize', resize);
-  resize();
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let colors = ['#ff0000', '#00ff00', '#0000ff'];
+let resultColor = '#ffffff';
 
-  const PALETTE = [
-    [255,59,48],[255,149,0],[255,204,0],
-    [52,199,89],[0,122,255],[88,86,214],
-    [255,45,85],[255,255,255],[142,142,147],
-    [255,99,71],[255,165,0],[255,220,128],
-    [144,238,144],[135,206,235],[186,85,211],
-    [255,182,193],[255,250,205],[173,216,230],
-    [255,215,0],[46,204,113],[26,188,156],
-    [52,152,219],[155,89,182],[231,76,60],
-  ];
-  const paletteEl = document.getElementById('palette');
-  PALETTE.forEach((rgb)=>{
-    const sw = document.createElement('div');
-    sw.className='swatch';
-    sw.style.backgroundColor = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    sw.addEventListener('click', ()=>{ setSlot(activeSlot, rgb); }, {passive:true});
-    paletteEl.appendChild(sw);
-  });
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - document.getElementById('controls').offsetHeight - document.getElementById('buttons').offsetHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-  const slots = [ document.getElementById('slot1'), document.getElementById('slot2'), document.getElementById('slot3') ];
-  let slotColors = [ PALETTE[0], PALETTE[4], PALETTE[2] ];
-  let activeSlot = 0;
-  slots.forEach((el, idx)=> el.addEventListener('click', ()=> selectSlot(idx), {passive:true}));
-  const mixEl = document.getElementById('mix');
-
-  function selectSlot(i) { activeSlot = i; slots.forEach((el, k)=> el.classList.toggle('active', k===i)); }
-  function setSlot(i, rgb) { slotColors[i] = rgb.slice(); renderSlots(); renderMix(); }
-  function renderSlots() { slots.forEach((el, i)=>{ const c = slotColors[i]; el.style.backgroundColor = `rgb(${c[0]},${c[1]},${c[2]})`; }); }
-  function avgColor(colors) { const n = colors.length || 1; let r=0,g=0,b=0; colors.forEach(c=>{ r+=c[0]; g+=c[1]; b+=c[2]; }); return [Math.round(r/n),Math.round(g/n),Math.round(b/n)]; }
-  function renderMix() { const used = slotColors.filter(Boolean); const m = avgColor(used); mixEl.style.backgroundColor = `rgb(${m[0]},${m[1]},${m[2]})`; return m; }
-  selectSlot(0); renderSlots(); renderMix();
-
-  const particles = [];
-  function rnd(a,b){ return a + Math.random()*(b-a); }
-  function addParticle(x,y,vx,vy,color,life,size){ particles.push({x,y,vx,vy,color,life,age:0,size}); }
-  function pattern_burst(x,y,color){ const n=140; for(let i=0;i<n;i++){ const ang = (i/n)*Math.PI*2 + rnd(-0.1,0.1); const sp  = rnd(120,260); addParticle(x,y, Math.cos(ang)*sp, Math.sin(ang)*sp, color, rnd(0.8,1.4), rnd(1.6,3)); } }
-  function pattern_ring(x,y,color){ const n=160, sp=220; for(let i=0;i<n;i++){ const ang = (i/n)*Math.PI*2; addParticle(x,y, Math.cos(ang)*sp, Math.sin(ang)*sp, color, 1.2, 2.2); } }
-  function pattern_star(x,y,color){ const spikes=25; for(let i=0;i<spikes;i++){ const ang = (i/spikes)*Math.PI*2; const r = (i%2===0)? 230:120; addParticle(x,y, Math.cos(ang)*r, Math.sin(ang)*r, color, 1.2, 2.6); } }
-  function pattern_heart(x,y,color){ const n=180; for(let i=0;i<n;i++){ const t = (i/n)*Math.PI*2; const px = 16*Math.sin(t)**3; const py = 13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t); const s=12; addParticle(x,y, px*s, -py*s, color, 1.3, 2.6); } }
-  function pattern_spiral(x,y,color){ const n=160; for(let i=0;i<n;i++){ const ang = (i/24)+i*0.03; const r= 40 + i*1.1; addParticle(x,y, Math.cos(ang)*r*3, Math.sin(ang)*r*3, color, 1.4, 2.2); } }
-  const PATTERNS = [pattern_burst, pattern_ring, pattern_star, pattern_heart, pattern_spiral];
-  function fireAtColor(color){ const x = rnd(W*0.25, W*0.95), y = rnd(H*0.1, H*0.55); const p = PATTERNS[(Math.random()*PATTERNS.length)|0]; p(x,y,color); }
-  function fireMixedOnce(){ fireAtColor(renderMix()); }
-  function fireMixedThree(){ fireMixedOnce(); fireMixedOnce(); fireMixedOnce(); }
-  function fireThreeSelected(){ slotColors.forEach(c=> fireAtColor(c)); }
-  function fireRandomThree(){ const PA = PALETTE; for(let i=0;i<3;i++){ fireAtColor(PA[(Math.random()*PA.length)|0]); } }
-
-  document.getElementById('btn3').addEventListener('click', fireMixedThree, {passive:true});
-  document.getElementById('btnColorido').addEventListener('click', fireThreeSelected, {passive:true});
-  document.getElementById('btnSurpresa').addEventListener('click', fireRandomThree, {passive:true});
-
-  let last = performance.now();
-  function drawBackground(){
-    const g = ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'#0b1026'); g.addColorStop(1,'#050813');
-    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    ctx.globalAlpha = 0.7;
-    for(let i=0;i<80;i++){
-      const x = (i*9973)%W, y = (i*7331)%(H*0.6)+5;
-      ctx.fillStyle = (i%9===0)? '#fff':'#cbd5e1';
-      ctx.fillRect(x, y, 1, 1);
-    }
-    ctx.globalAlpha = 1;
-  }
-  function step(){
-    const now = performance.now();
-    const dt = Math.min(0.033, (now-last)/1000); last = now;
-    drawBackground();
-    const gravity = 140;
-    const next = [];
-    for(let i=0;i<particles.length;i++){
-      const p = particles[i];
-      p.age += dt;
-      p.vy += gravity*dt;
-      p.x += p.vx*dt;
-      p.y += p.vy*dt;
-      const lifeRatio = Math.max(0, 1 - p.age/p.life);
-      if(lifeRatio>0){
-        ctx.globalAlpha = lifeRatio;
-        ctx.fillStyle = `rgb(${p.color[0]},${p.color[1]},${p.color[2]})`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-        ctx.fill();
-        next.push(p);
-      }
-    }
-    if(next.length > 7000) next.splice(0, next.length-7000);
-    particles.length = 0; Array.prototype.push.apply(particles, next);
-    requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-  canvas.addEventListener('touchmove', e=> e.preventDefault(), {passive:false});
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(console.error);
+function createColorPicker(elementId, index) {
+    const colorsAvailable = ['#FF0000','#00FF00','#0000FF','#FFFF00','#FF00FF','#00FFFF','#FFA500','#800080','#008000','#FFC0CB','#A52A2A','#FFFFFF'];
+    const container = document.getElementById(elementId);
+    colorsAvailable.forEach(color => {
+        const btn = document.createElement('button');
+        btn.className = 'color-btn';
+        btn.style.background = color;
+        btn.onclick = () => { colors[index] = color; updateResultColor(); };
+        container.appendChild(btn);
     });
-  }
-})();
+}
+function updateResultColor() {
+    resultColor = mixColors(colors);
+    document.getElementById('result').style.background = resultColor;
+}
+function mixColors(cols) {
+    let r=0,g=0,b=0;
+    cols.forEach(c=>{
+        const bigint = parseInt(c.slice(1), 16);
+        r += (bigint >> 16) & 255;
+        g += (bigint >> 8) & 255;
+        b += bigint & 255;
+    });
+    r = Math.floor(r / cols.length);
+    g = Math.floor(g / cols.length);
+    b = Math.floor(b / cols.length);
+    return `rgb(${r},${g},${b})`;
+}
+
+function fireworksDefault() {
+    for(let i=0; i<3; i++) createFirework(resultColor);
+}
+function fireworksColorido() {
+    colors.forEach(c => createFirework(c));
+}
+function fireworksSurpresa() {
+    for(let i=0; i<3; i++) createFirework(randomColor());
+}
+function randomColor() {
+    return `hsl(${Math.random()*360},100%,50%)`;
+}
+
+let fireworks = [];
+function createFirework(color) {
+    const x = Math.random() * canvas.width;
+    const y = Math.random() * canvas.height / 2;
+    const particles = [];
+    for(let i=0;i<50;i++){
+        particles.push({
+            x, y,
+            angle: Math.random() * 2 * Math.PI,
+            speed: Math.random() * 4 + 1,
+            radius: Math.random() * 2 + 1,
+            color,
+            life: 100
+        });
+    }
+    fireworks.push(particles);
+}
+function animate() {
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    fireworks.forEach((particles, index) => {
+        particles.forEach(p => {
+            p.x += Math.cos(p.angle) * p.speed;
+            p.y += Math.sin(p.angle) * p.speed;
+            p.life--;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        });
+        if (particles.every(p => p.life <= 0)) fireworks.splice(index, 1);
+    });
+    requestAnimationFrame(animate);
+}
+animate();
+
+createColorPicker('color1', 0);
+createColorPicker('color2', 1);
+createColorPicker('color3', 2);
+updateResultColor();
 </script>
 </body>
 </html>
