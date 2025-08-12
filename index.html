@@ -1,170 +1,62 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Fogos Coloridos</title>
-<style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        height: 100%;
-        background: black;
-        display: flex;
-        flex-direction: column;
-    }
-    #controls {
-        display: flex;
-        justify-content: space-around;
-        padding: 5px;
-        background: rgba(0, 0, 0, 0.7);
-    }
-    .color-picker {
-        display: grid;
-        grid-template-columns: repeat(3, 30px);
-        gap: 5px;
-    }
-    .color-btn {
-        width: 30px;
-        height: 30px;
-        border: none;
-        cursor: pointer;
-    }
-    #result {
-        width: 30px;
-        height: 30px;
-        border: 2px solid white;
-        margin: auto;
-    }
-    #buttons {
-        display: flex;
-        justify-content: space-around;
-        margin-top: 5px;
-    }
-    button {
-        padding: 8px 10px;
-        font-size: 14px;
-        cursor: pointer;
-        border: none;
-        border-radius: 5px;
-    }
-    canvas {
-        flex: 1;
-        display: block;
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#990c1c">
+    <title>Fogos para Crianças</title>
+
+    <!-- Manifest e Service Worker -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+            .then(() => console.log('Service Worker registrado com sucesso.'))
+            .catch(err => console.log('Erro ao registrar Service Worker:', err));
+        }
+    </script>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: black;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
 </head>
 <body>
 
-<div id="controls">
-    <div class="color-picker" id="color1"></div>
-    <div class="color-picker" id="color2"></div>
-    <div class="color-picker" id="color3"></div>
-    <div id="result"></div>
-</div>
-<div id="buttons">
-    <button style="background:red; color:white;" onclick="fireworksDefault()">Estourar</button>
-    <button style="background:blue; color:white;" onclick="fireworksColorido()">Colorido</button>
-    <button style="background:green; color:white;" onclick="fireworksSurpresa()">Surpresa</button>
-</div>
-<canvas id="canvas"></canvas>
+    <canvas id="canvas"></canvas>
 
-<script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-let colors = ['#ff0000', '#00ff00', '#0000ff'];
-let resultColor = '#ffffff';
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - document.getElementById('controls').offsetHeight - document.getElementById('buttons').offsetHeight;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
 
-function createColorPicker(elementId, index) {
-    const colorsAvailable = ['#FF0000','#00FF00','#0000FF','#FFFF00','#FF00FF','#00FFFF','#FFA500','#800080','#008000','#FFC0CB','#A52A2A','#FFFFFF'];
-    const container = document.getElementById(elementId);
-    colorsAvailable.forEach(color => {
-        const btn = document.createElement('button');
-        btn.className = 'color-btn';
-        btn.style.background = color;
-        btn.onclick = () => { colors[index] = color; updateResultColor(); };
-        container.appendChild(btn);
-    });
-}
-function updateResultColor() {
-    resultColor = mixColors(colors);
-    document.getElementById('result').style.background = resultColor;
-}
-function mixColors(cols) {
-    let r=0,g=0,b=0;
-    cols.forEach(c=>{
-        const bigint = parseInt(c.slice(1), 16);
-        r += (bigint >> 16) & 255;
-        g += (bigint >> 8) & 255;
-        b += bigint & 255;
-    });
-    r = Math.floor(r / cols.length);
-    g = Math.floor(g / cols.length);
-    b = Math.floor(b / cols.length);
-    return `rgb(${r},${g},${b})`;
-}
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-function fireworksDefault() {
-    for(let i=0; i<3; i++) createFirework(resultColor);
-}
-function fireworksColorido() {
-    colors.forEach(c => createFirework(c));
-}
-function fireworksSurpresa() {
-    for(let i=0; i<3; i++) createFirework(randomColor());
-}
-function randomColor() {
-    return `hsl(${Math.random()*360},100%,50%)`;
-}
-
-let fireworks = [];
-function createFirework(color) {
-    const x = Math.random() * canvas.width;
-    const y = Math.random() * canvas.height / 2;
-    const particles = [];
-    for(let i=0;i<50;i++){
-        particles.push({
-            x, y,
-            angle: Math.random() * 2 * Math.PI,
-            speed: Math.random() * 4 + 1,
-            radius: Math.random() * 2 + 1,
-            color,
-            life: 100
-        });
-    }
-    fireworks.push(particles);
-}
-function animate() {
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    fireworks.forEach((particles, index) => {
-        particles.forEach(p => {
-            p.x += Math.cos(p.angle) * p.speed;
-            p.y += Math.sin(p.angle) * p.speed;
-            p.life--;
+        function drawFirework() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
-            ctx.fillStyle = p.color;
+            ctx.arc(canvas.width / 2, canvas.height / 2, 50, 0, Math.PI * 2);
+            ctx.fillStyle = 'red';
             ctx.fill();
-        });
-        if (particles.every(p => p.life <= 0)) fireworks.splice(index, 1);
-    });
-    requestAnimationFrame(animate);
-}
-animate();
+        }
 
-createColorPicker('color1', 0);
-createColorPicker('color2', 1);
-createColorPicker('color3', 2);
-updateResultColor();
-</script>
+        setInterval(drawFirework, 1000);
+    </script>
 </body>
 </html>
