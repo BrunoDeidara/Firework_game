@@ -1,0 +1,13 @@
+{
+  "name": "Fogos para Crianças",
+  "short_name": "Fogos",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#090c1c",
+  "theme_color": "#090c1c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose":"any maskable" }
+  ]
+}
