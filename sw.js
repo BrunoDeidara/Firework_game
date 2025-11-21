@@ -1,4 +1,4 @@
-// Mudei o nome para garantir que o navegador baixe a nova versão 4.0
+
 const CACHE_NAME = 'firework-master-v4';
 
 const ASSETS = [
