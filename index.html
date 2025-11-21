@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
-    <title>Firework Tycoon V6</title>
+    <title>Firework Tycoon V7</title>
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -162,12 +162,12 @@
 </div>
 
 <script>
-/* FIREWORK TYCOON V6 */
+/* FIREWORK TYCOON V7 - AUDIO VARIADO */
 
 // --- DADOS E ESTADO ---
 const DATA = {
-    money: 100, // Começa com um troco
-    unlocked: ['circle', 'star'], // Começa com 2 formas
+    money: 100, 
+    unlocked: ['circle', 'star'],
     selectedColor: '#ff0055',
     selectedShape: 'circle',
     sequence: [null, null, null, null],
@@ -183,7 +183,7 @@ const COLORS = [
 
 const SHAPES = [
     {id:'circle', i:'●', price:0},
-    {id:'star',   i:'★', price:0}, // Já desbloqueado
+    {id:'star',   i:'★', price:0}, 
     {id:'heart',  i:'♥', price:200},
     {id:'ring',   i:'◎', price:500},
     {id:'spiral', i:'🌀', price:1000},
@@ -191,21 +191,27 @@ const SHAPES = [
     {id:'mega',   i:'☢', price:5000}
 ];
 
-// --- SISTEMA DE AUDIO ---
+// --- NOVO SISTEMA DE AUDIO (Com variações aleatórias!) ---
 const AudioSys = {
     ctx: null,
+    masterGain: null,
     init(){
         if(!this.ctx){
             this.ctx = new (window.AudioContext||window.webkitAudioContext)();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.gain.value = 0.8; // Volume Geral
+            this.masterGain.connect(this.ctx.destination);
         }
         if(this.ctx.state==='suspended') this.ctx.resume();
     },
+    
+    // Efeitos específicos (Compra/Erro)
     playEffect(type){
         if(!this.ctx) return;
         const t = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.connect(gain); gain.connect(this.masterGain);
 
         if(type === 'buy'){ // Som de Caixa Registradora
             osc.type = 'sine';
@@ -222,19 +228,60 @@ const AudioSys = {
             osc.start(t); osc.stop(t+0.2);
         }
     },
-    playBoom(size){
+    
+    // Explosões Aleatórias e Complexas
+    playBoom(size = 1) {
         if(!this.ctx) return;
         const t = this.ctx.currentTime;
-        const buf = this.ctx.createBuffer(1, this.ctx.sampleRate*0.5, this.ctx.sampleRate);
+        
+        const type = Math.floor(Math.random() * 3) + 1; // Sorteia um tipo de som (1 a 3)
+        
+        // --- 1. Ruído Principal (O estouro) ---
+        const duration = size * 0.15 + 0.3;
+        const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * duration, this.ctx.sampleRate);
         const d = buf.getChannelData(0);
-        for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
-        const src = this.ctx.createBufferSource(); src.buffer=buf;
-        const f = this.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=800;
+        for(let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        
+        const src = this.ctx.createBufferSource(); src.buffer = buf;
+        
+        const f = this.ctx.createBiquadFilter(); f.type = 'highpass';
+        f.frequency.value = 500 + type * 300 + Math.random() * 500; // Varia a "cor" do ruído
+        
         const g = this.ctx.createGain();
-        src.connect(f); f.connect(g); g.connect(this.ctx.destination);
-        g.gain.setValueAtTime(0.5, t);
-        g.gain.exponentialRampToValueAtTime(0.01, t+(size>1?0.6:0.3));
+        src.connect(f); f.connect(g); g.connect(this.masterGain);
+        
+        g.gain.setValueAtTime(0.5 * size, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t + duration);
         src.start(t);
+
+        // --- 2. Sub-Bass (O Soco) ---
+        const sub = this.ctx.createOscillator();
+        const gSub = this.ctx.createGain();
+        sub.type = 'sine';
+        
+        sub.frequency.setValueAtTime(50, t); 
+        sub.frequency.exponentialRampToValueAtTime(20, t + 0.1);
+        
+        sub.connect(gSub); gSub.connect(this.masterGain);
+        
+        gSub.gain.setValueAtTime(0.3 * size, t);
+        gSub.gain.linearRampToValueAtTime(0, t + 0.2);
+        
+        sub.start(t); sub.stop(t + 0.2);
+
+        // --- 3. Variação (Som Extra Curto/Agudo) ---
+        if(type === 3) {
+            const noise = this.ctx.createBufferSource(); noise.buffer = buf;
+            const fHigh = this.ctx.createBiquadFilter(); fHigh.type = 'bandpass'; fHigh.frequency.value = 5000;
+            const gHigh = this.ctx.createGain();
+            
+            noise.connect(fHigh); fHigh.connect(gHigh); gHigh.connect(this.masterGain);
+            
+            gHigh.gain.setValueAtTime(0.2, t);
+            gHigh.gain.linearRampToValueAtTime(0, t + 0.15);
+            
+            noise.start(t);
+        }
     }
 };
 
@@ -269,7 +316,7 @@ function createExplosion(x,y, cOverride, sOverride){
     updateUI();
     saveGame();
     
-    AudioSys.playBoom(shape==='mega'?2:1);
+    AudioSys.playBoom(shape==='mega'?2.5:1);
 
     const count = shape==='mega'?200:60;
     for(let i=0;i<count;i++){
@@ -298,6 +345,7 @@ function initUI(){
 
     renderShop();
     updateUI();
+    updateSeqUI(); 
 }
 
 function renderShop(){
@@ -335,7 +383,7 @@ function tryBuy(item, x, y){
         showFloat('COMPRADO!', x, y, '#ffd700');
         saveGame();
         renderShop();
-        selectShape(item.id); // Seleciona automaticamente após comprar
+        selectShape(item.id); 
     } else {
         AudioSys.playEffect('error');
         showFloat('SEM GRANA!', x, y, '#ff3b30');
@@ -345,12 +393,9 @@ function tryBuy(item, x, y){
 function selectColor(c, btn){
     AudioSys.init();
     if(DATA.recSlot !== null){
-        // Modo Gravação
         recordStep(c, null);
     } else {
-        // Modo Normal
         DATA.selectedColor = c;
-        // Atualiza visual seleção
         document.querySelectorAll('#pad-colors .btn-pad').forEach(b=>b.classList.remove('selected'));
         btn.classList.add('selected');
     }
@@ -359,21 +404,19 @@ function selectColor(c, btn){
 function selectShape(sid){
     AudioSys.init();
     if(DATA.recSlot !== null){
-        // Modo Gravação
         recordStep(null, sid);
     } else {
-        // Modo Normal
         DATA.selectedShape = sid;
-        renderShop(); // Re-renderiza para atualizar a borda de seleção
+        renderShop();
     }
 }
 
 // --- SEQUENCER ---
 function recordToggle(idx){
     if(DATA.recSlot === idx){
-        DATA.recSlot = null; // Cancela
+        DATA.recSlot = null;
     } else {
-        DATA.recSlot = idx; // Grava neste
+        DATA.recSlot = idx;
     }
     updateSeqUI();
 }
@@ -385,7 +428,6 @@ function recordStep(c, s){
     
     DATA.sequence[DATA.recSlot] = current;
     
-    // Auto-avança
     if(DATA.recSlot < 3) DATA.recSlot++;
     else DATA.recSlot = null;
     
@@ -440,13 +482,15 @@ function showFloat(txt, x, y, col){
     el.style.left=x+'px'; el.style.top=y+'px'; el.style.color=col;
     document.body.appendChild(el); setTimeout(()=>el.remove(),1000);
 }
-function clearVisuals(){ particles=[]; ctx.fillStyle='black'; ctx.fillRect(0,0,W,H); } // Limpa só tela
+function clearVisuals(){ particles=[]; ctx.fillStyle='black'; ctx.fillRect(0,0,W,H); } 
 
 // --- SAVE SYSTEM ---
 function saveGame(){ localStorage.setItem('firework_v6', JSON.stringify({m:DATA.money, u:DATA.unlocked})); }
 function loadGame(){
     const s = JSON.parse(localStorage.getItem('firework_v6'));
+    // Se o cache for novo (vazio), inicializa o dinheiro/desbloqueios iniciais
     if(s){ DATA.money=s.m; DATA.unlocked=s.u; }
+    // Caso contrário, usa os valores padrão (100 e circle/star)
 }
 
 // --- LOOP ---
@@ -459,7 +503,8 @@ function loop(){
 
 // INPUT
 window.addEventListener('pointerdown', e => {
-    if(e.target.closest('.btn-pad') || e.target.closest('.sequencer-wrapper') || e.target.closest('.btn-clear-canvas')) return;
+    // Verifica se o clique foi em algum controle da UI antes de disparar o fogo
+    if(e.target.closest('.btn-pad') || e.target.closest('.sequencer-wrapper') || e.target.closest('.btn-clear-canvas') || e.target.closest('.mini-btn')) return;
     AudioSys.init();
     if(DATA.recSlot === null) createExplosion(e.clientX, e.clientY);
 });
