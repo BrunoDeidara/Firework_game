@@ -21,21 +21,15 @@
             position: fixed; width: 100%; height: 100%;
         }
         canvas { display: block; width: 100%; height: 100%; position: absolute; z-index: 1; }
-
-        /* UI LAYER */
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 10;
             display: flex; flex-direction: column; justify-content: space-between;
         }
-
-        /* --- TOPO --- */
         .top-bar {
             display: flex; justify-content: space-between; align-items: center;
             padding: 10px 20px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
         }
-
-        /* Money & Score */
         .stats-box {
             display: flex; flex-direction: column; gap: 5px;
             text-shadow: 0 2px 4px black;
@@ -43,8 +37,6 @@
         .money { color: var(--neon-green); font-size: 22px; display: flex; align-items: center; gap: 5px; }
         .combo { color: var(--neon-gold); font-size: 16px; opacity: 0; transition: 0.3s; }
         .combo.active { opacity: 1; transform: scale(1.2); }
-
-        /* Sequencer Area */
         .sequencer-wrapper {
             pointer-events: auto;
             display: flex; align-items: center; gap: 10px;
@@ -60,8 +52,6 @@
         .slot.recording { border-color: #ff0055; animation: pulse 1s infinite; }
         .slot.filled { border-style: solid; border-color: white; color: white; text-shadow: 0 0 4px black; }
         .slot-icon { font-size: 20px; z-index: 2; }
-        
-        /* Botões Pequenos do Sequencer */
         .mini-btn {
             width: 35px; height: 35px; border-radius: 50%; border: none;
             background: rgba(255,255,255,0.1); color: white; cursor: pointer;
@@ -70,15 +60,11 @@
         .mini-btn:active { transform: scale(0.9); }
         .btn-play { background: var(--neon-green); color: black; box-shadow: 0 0 10px var(--neon-green); }
         .btn-trash { background: #ff3b30; }
-
-        /* Right Actions */
         .top-right { pointer-events: auto; }
         .btn-clear-canvas {
             background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;
             border: 1px solid white; color: white; font-family: inherit; cursor: pointer;
         }
-
-        /* --- BAIXO (CONTROLES) --- */
         .bottom-controls {
             display: flex; justify-content: space-between; padding: 15px;
             pointer-events: auto;
@@ -88,13 +74,11 @@
             display: flex; flex-direction: column; align-items: center; gap: 5px;
         }
         .pad-label { font-size: 10px; opacity: 0.7; letter-spacing: 1px; }
-        
         .pad-grid {
             display: grid; gap: 8px;
         }
-        .pad-left { grid-template-columns: repeat(2, var(--btn-size)); } /* Cores */
-        .pad-right { grid-template-columns: repeat(2, var(--btn-size)); } /* Formas */
-
+        .pad-left { grid-template-columns: repeat(2, var(--btn-size)); }
+        .pad-right { grid-template-columns: repeat(2, var(--btn-size)); }
         .btn-pad {
             width: var(--btn-size); height: var(--btn-size);
             border-radius: 12px; border: 2px solid transparent;
@@ -104,17 +88,13 @@
         }
         .btn-pad.selected { border-color: white; background: rgba(255,255,255,0.2); transform: scale(1.05); }
         .btn-pad.locked { opacity: 0.8; filter: grayscale(0.8); border: 1px solid #444; }
-        
         .lock-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); border-radius: 10px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
         .price-tag { font-size: 10px; color: var(--neon-gold); margin-top: 2px; font-weight: bold; }
-
         @keyframes pulse { 0% { box-shadow: 0 0 5px #ff0055; } 50% { box-shadow: 0 0 15px #ff0055; } }
-        
-        /* Floating Text */
         .float-txt {
             position: absolute; pointer-events: none; font-size: 20px; font-weight: bold;
             animation: floatUp 1s forwards; z-index: 20;
@@ -162,9 +142,6 @@
 </div>
 
 <script>
-/* FIREWORK TYCOON V7 - AUDIO VARIADO */
-
-// --- DADOS E ESTADO ---
 const DATA = {
     money: 100, 
     unlocked: ['circle', 'star'],
@@ -191,21 +168,17 @@ const SHAPES = [
     {id:'mega',   i:'☢', price:5000}
 ];
 
-// --- NOVO SISTEMA DE AUDIO (Com variações aleatórias!) ---
 const AudioSys = {
-    ctx: null,
-    masterGain: null,
+    ctx: null, masterGain: null,
     init(){
         if(!this.ctx){
             this.ctx = new (window.AudioContext||window.webkitAudioContext)();
             this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = 0.8; // Volume Geral
+            this.masterGain.gain.value = 0.8; 
             this.masterGain.connect(this.ctx.destination);
         }
         if(this.ctx.state==='suspended') this.ctx.resume();
     },
-    
-    // Efeitos específicos (Compra/Erro)
     playEffect(type){
         if(!this.ctx) return;
         const t = this.ctx.currentTime;
@@ -213,14 +186,14 @@ const AudioSys = {
         const gain = this.ctx.createGain();
         osc.connect(gain); gain.connect(this.masterGain);
 
-        if(type === 'buy'){ // Som de Caixa Registradora
+        if(type === 'buy'){
             osc.type = 'sine';
             osc.frequency.setValueAtTime(1200, t);
             osc.frequency.setValueAtTime(2000, t+0.1);
             gain.gain.setValueAtTime(0.1, t);
             gain.gain.linearRampToValueAtTime(0, t+0.2);
             osc.start(t); osc.stop(t+0.2);
-        } else if(type === 'error'){ // Som de Erro
+        } else if(type === 'error'){
             osc.type = 'sawtooth';
             osc.frequency.value = 150;
             gain.gain.setValueAtTime(0.1, t);
@@ -228,64 +201,47 @@ const AudioSys = {
             osc.start(t); osc.stop(t+0.2);
         }
     },
-    
-    // Explosões Aleatórias e Complexas
     playBoom(size = 1) {
         if(!this.ctx) return;
         const t = this.ctx.currentTime;
+        const type = Math.floor(Math.random() * 3) + 1;
         
-        const type = Math.floor(Math.random() * 3) + 1; // Sorteia um tipo de som (1 a 3)
-        
-        // --- 1. Ruído Principal (O estouro) ---
         const duration = size * 0.15 + 0.3;
         const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * duration, this.ctx.sampleRate);
         const d = buf.getChannelData(0);
         for(let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
         
         const src = this.ctx.createBufferSource(); src.buffer = buf;
-        
         const f = this.ctx.createBiquadFilter(); f.type = 'highpass';
-        f.frequency.value = 500 + type * 300 + Math.random() * 500; // Varia a "cor" do ruído
-        
+        f.frequency.value = 500 + type * 300 + Math.random() * 500;
         const g = this.ctx.createGain();
         src.connect(f); f.connect(g); g.connect(this.masterGain);
-        
         g.gain.setValueAtTime(0.5 * size, t);
         g.gain.exponentialRampToValueAtTime(0.01, t + duration);
         src.start(t);
 
-        // --- 2. Sub-Bass (O Soco) ---
         const sub = this.ctx.createOscillator();
         const gSub = this.ctx.createGain();
         sub.type = 'sine';
-        
         sub.frequency.setValueAtTime(50, t); 
         sub.frequency.exponentialRampToValueAtTime(20, t + 0.1);
-        
         sub.connect(gSub); gSub.connect(this.masterGain);
-        
         gSub.gain.setValueAtTime(0.3 * size, t);
         gSub.gain.linearRampToValueAtTime(0, t + 0.2);
-        
         sub.start(t); sub.stop(t + 0.2);
 
-        // --- 3. Variação (Som Extra Curto/Agudo) ---
         if(type === 3) {
             const noise = this.ctx.createBufferSource(); noise.buffer = buf;
             const fHigh = this.ctx.createBiquadFilter(); fHigh.type = 'bandpass'; fHigh.frequency.value = 5000;
             const gHigh = this.ctx.createGain();
-            
             noise.connect(fHigh); fHigh.connect(gHigh); gHigh.connect(this.masterGain);
-            
             gHigh.gain.setValueAtTime(0.2, t);
             gHigh.gain.linearRampToValueAtTime(0, t + 0.15);
-            
             noise.start(t);
         }
     }
 };
 
-// --- GRAPHICS ENGINE ---
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', {alpha:false});
 let W, H, particles=[];
@@ -303,13 +259,11 @@ class Particle {
     draw(){ ctx.globalAlpha=Math.max(0,this.life); ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,3,0,6.28); ctx.fill(); }
 }
 
-// --- CORE LOGIC ---
 function createExplosion(x,y, cOverride, sOverride){
     const color = cOverride || DATA.selectedColor;
     const shape = sOverride || DATA.selectedShape;
     const finalC = color==='random' ? `hsl(${Math.random()*360},100%,50%)` : color;
     
-    // Ganhar Dinheiro
     const reward = shape==='mega'?15:5;
     DATA.money += reward;
     showFloat(`+$${reward}`, x, y-30, '#00ff66');
@@ -321,7 +275,6 @@ function createExplosion(x,y, cOverride, sOverride){
     const count = shape==='mega'?200:60;
     for(let i=0;i<count;i++){
         const p = new Particle(x,y,finalC,shape);
-        // Shape Logic Simplificada
         if(shape==='star'){ const a=(i/count)*6.28; const r=(i%2)?12:4; p.vx=Math.cos(a)*r; p.vy=Math.sin(a)*r; }
         if(shape==='heart'){ const t=(i/count)*6.28; p.vx=(16*Math.sin(t)**3)*0.5; p.vy=-(13*Math.cos(t)-5*Math.cos(2*t))*0.5; }
         if(shape==='ring'){ const a=(i/count)*6.28; p.vx=Math.cos(a)*8; p.vy=Math.sin(a)*8; }
@@ -329,11 +282,9 @@ function createExplosion(x,y, cOverride, sOverride){
     }
 }
 
-// --- UI SHOP & CONTROLS ---
 function initUI(){
     loadGame();
     
-    // Pad de Cores
     const cp = document.getElementById('pad-colors');
     COLORS.forEach(c => {
         const btn = document.createElement('div'); btn.className='btn-pad';
@@ -411,7 +362,6 @@ function selectShape(sid){
     }
 }
 
-// --- SEQUENCER ---
 function recordToggle(idx){
     if(DATA.recSlot === idx){
         DATA.recSlot = null;
@@ -465,7 +415,7 @@ function updateSeqUI(){
         el.innerHTML = '';
         
         if(data){
-            el.style.backgroundColor = data.c === 'random' ? '#555' : data.c;
+            el.style.backgroundColor = data.c === 'random' ? '#004d4d' : data.c; 
             const icon = SHAPES.find(x=>x.id===data.s).i;
             el.innerHTML = `<span class="slot-icon">${icon}</span>`;
         } else {
@@ -475,7 +425,6 @@ function updateSeqUI(){
     }
 }
 
-// --- UTIL ---
 function updateUI(){ document.getElementById('money-display').innerText = DATA.money; }
 function showFloat(txt, x, y, col){
     const el = document.createElement('div'); el.className='float-txt'; el.innerText=txt;
@@ -484,16 +433,12 @@ function showFloat(txt, x, y, col){
 }
 function clearVisuals(){ particles=[]; ctx.fillStyle='black'; ctx.fillRect(0,0,W,H); } 
 
-// --- SAVE SYSTEM ---
 function saveGame(){ localStorage.setItem('firework_v6', JSON.stringify({m:DATA.money, u:DATA.unlocked})); }
 function loadGame(){
     const s = JSON.parse(localStorage.getItem('firework_v6'));
-    // Se o cache for novo (vazio), inicializa o dinheiro/desbloqueios iniciais
     if(s){ DATA.money=s.m; DATA.unlocked=s.u; }
-    // Caso contrário, usa os valores padrão (100 e circle/star)
 }
 
-// --- LOOP ---
 function loop(){
     requestAnimationFrame(loop);
     ctx.globalCompositeOperation='source-over'; ctx.fillStyle='rgba(5,5,8,0.2)'; ctx.fillRect(0,0,W,H);
@@ -501,9 +446,7 @@ function loop(){
     for(let i=particles.length-1;i>=0;i--){ particles[i].update(); particles[i].draw(); if(particles[i].life<=0)particles.splice(i,1); }
 }
 
-// INPUT
 window.addEventListener('pointerdown', e => {
-    // Verifica se o clique foi em algum controle da UI antes de disparar o fogo
     if(e.target.closest('.btn-pad') || e.target.closest('.sequencer-wrapper') || e.target.closest('.btn-clear-canvas') || e.target.closest('.mini-btn')) return;
     AudioSys.init();
     if(DATA.recSlot === null) createExplosion(e.clientX, e.clientY);
