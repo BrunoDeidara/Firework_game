@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
-    <title>Firework Tycoon V8</title>
+    <title>Firework Tycoon V8.1</title>
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -239,7 +239,6 @@ const AudioSys = {
         const type = Math.floor(Math.random() * 3) + 1; 
         const baseDuration = 0.3 + size * 0.1;
 
-        // Sub-Bass (Rumble)
         const sub = this.ctx.createOscillator();
         const gSub = this.ctx.createGain();
         sub.type = 'sine';
@@ -250,7 +249,6 @@ const AudioSys = {
         gSub.gain.linearRampToValueAtTime(0, t + 0.3);
         sub.start(t); sub.stop(t + 0.3);
 
-        // Noise Layers
         for(let i = 0; i < 2; i++) {
             const duration = baseDuration + Math.random() * 0.2;
             const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * duration, this.ctx.sampleRate);
@@ -304,11 +302,15 @@ class Rocket {
     }
 
     update() {
+        // CORREÇÃO: Força o movimento vertical até o alvo
         this.y += this.vy;
         this.vy *= 0.98; 
+        
+        // Adiciona rastros
         this.trail.push({x: this.x, y: this.y, color: this.color, r: this.r});
         if (this.trail.length > 10) this.trail.shift();
 
+        // Condição de explosão: se passou ou atingiu o alvo
         if (this.y <= this.targetY) {
             this.explosionCallback(this.x, this.targetY, this.color, this.shape);
             this.life = 0; 
@@ -316,13 +318,18 @@ class Rocket {
     }
 
     draw() {
+        // CORREÇÃO: Garante que o rastro só é desenhado se o foguete estiver vivo
+        if(this.life > 0) {
+            ctx.globalAlpha = 0.5; // Transparência para o rastro
+            this.trail.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
         ctx.globalAlpha = this.life;
-        this.trail.forEach(p => {
-            ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r * 0.5, 0, Math.PI * 2);
-            ctx.fill();
-        });
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
@@ -525,7 +532,15 @@ function showFloat(txt, x, y, col){
     el.style.left=x+'px'; el.style.top=y+'px'; el.style.color=col;
     document.body.appendChild(el); setTimeout(()=>el.remove(),1000);
 }
-function clearVisuals(){ particles=[]; rockets=[]; ctx.fillStyle='black'; ctx.fillRect(0,0,W,H); } 
+
+function clearVisuals(){ 
+    particles=[]; 
+    rockets=[]; 
+    // Limpeza total da tela para remover rastros persistentes
+    ctx.globalCompositeOperation='source-over'; 
+    ctx.fillStyle='black'; 
+    ctx.fillRect(0,0,W,H); 
+} 
 
 function saveGame(){ localStorage.setItem('firework_v6', JSON.stringify({m:DATA.money, u:DATA.unlocked})); }
 function loadGame(){
@@ -535,15 +550,18 @@ function loadGame(){
 
 function loop(){
     requestAnimationFrame(loop);
-    ctx.globalCompositeOperation='source-over'; ctx.fillStyle='rgba(5,5,8,0.2)'; ctx.fillRect(0,0,W,H);
+    // Limpeza suave: apaga um pouco o quadro anterior para deixar o rastro das partículas
+    ctx.globalCompositeOperation='source-over'; 
+    ctx.fillStyle='rgba(5,5,8,0.2)'; 
+    ctx.fillRect(0,0,W,H);
     ctx.globalCompositeOperation='lighter';
+    
     for(let i=particles.length-1;i>=0;i--){ particles[i].update(); particles[i].draw(); if(particles[i].life<=0)particles.splice(i,1); }
     for(let i=rockets.length-1;i>=0;i--){ rockets[i].update(); rockets[i].draw(); if(rockets[i].life<=0)rockets.splice(i,1); }
 }
 
 window.addEventListener('pointerdown', e => {
     if(e.target.closest('.btn-pad') || e.target.closest('.sequencer-wrapper') || e.target.closest('.btn-clear-canvas') || e.target.closest('.mini-btn') || e.target.closest('#fire-button')) return;
-    // Removido o clique na tela para disparo, agora usa o botão DISPARAR
 });
 
 initUI();
