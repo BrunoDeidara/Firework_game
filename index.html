@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
-    <title>Firework Tycoon V7</title>
+    <title>Firework Tycoon V8</title>
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -88,6 +88,7 @@
         }
         .btn-pad.selected { border-color: white; background: rgba(255,255,255,0.2); transform: scale(1.05); }
         .btn-pad.locked { opacity: 0.8; filter: grayscale(0.8); border: 1px solid #444; }
+        .btn-pad.random-color.selected { box-shadow: 0 0 15px #f0f; border-color: #f0f; }
         .lock-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); border-radius: 10px;
@@ -100,6 +101,19 @@
             animation: floatUp 1s forwards; z-index: 20;
         }
         @keyframes floatUp { 0% { transform:translate(-50%,0); opacity:0; } 20% { opacity:1; } 100% { transform:translate(-50%,-50px); opacity:0; } }
+
+        .fire-button-container {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            pointer-events: auto; z-index: 100;
+        }
+        #fire-button {
+            background: linear-gradient(45deg, #00f3ff, #00ff66);
+            border: 2px solid white; border-radius: 30px;
+            color: black; font-family: 'Russo One', sans-serif; font-size: 24px;
+            padding: 15px 40px; cursor: pointer;
+            box-shadow: 0 0 20px rgba(0,255,255,0.7);
+        }
+        #fire-button:active { transform: scale(0.95); box-shadow: 0 0 10px rgba(0,255,255,0.7); }
     </style>
 </head>
 <body>
@@ -139,6 +153,10 @@
             <div class="pad-grid pad-right" id="pad-shapes"></div>
         </div>
     </div>
+</div>
+
+<div class="fire-button-container">
+    <button id="fire-button" onclick="launchFirework()">DISPARAR</button>
 </div>
 
 <script>
@@ -201,50 +219,62 @@ const AudioSys = {
             osc.start(t); osc.stop(t+0.2);
         }
     },
+    playLaunch(){
+        if(!this.ctx) return;
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.exponentialRampToValueAtTime(1000, t + 0.5);
+        gain.gain.setValueAtTime(0.05, t);
+        gain.gain.linearRampToValueAtTime(0, t + 0.5);
+        osc.connect(gain); gain.connect(this.masterGain);
+        osc.start(t); osc.stop(t + 0.5);
+    },
     playBoom(size = 1) {
         if(!this.ctx) return;
         const t = this.ctx.currentTime;
-        const type = Math.floor(Math.random() * 3) + 1;
         
-        const duration = size * 0.15 + 0.3;
-        const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * duration, this.ctx.sampleRate);
-        const d = buf.getChannelData(0);
-        for(let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-        
-        const src = this.ctx.createBufferSource(); src.buffer = buf;
-        const f = this.ctx.createBiquadFilter(); f.type = 'highpass';
-        f.frequency.value = 500 + type * 300 + Math.random() * 500;
-        const g = this.ctx.createGain();
-        src.connect(f); f.connect(g); g.connect(this.masterGain);
-        g.gain.setValueAtTime(0.5 * size, t);
-        g.gain.exponentialRampToValueAtTime(0.01, t + duration);
-        src.start(t);
+        const type = Math.floor(Math.random() * 3) + 1; 
+        const baseDuration = 0.3 + size * 0.1;
 
+        // Sub-Bass (Rumble)
         const sub = this.ctx.createOscillator();
         const gSub = this.ctx.createGain();
         sub.type = 'sine';
-        sub.frequency.setValueAtTime(50, t); 
-        sub.frequency.exponentialRampToValueAtTime(20, t + 0.1);
+        sub.frequency.setValueAtTime(40, t); 
+        sub.frequency.exponentialRampToValueAtTime(10, t + 0.15);
         sub.connect(gSub); gSub.connect(this.masterGain);
-        gSub.gain.setValueAtTime(0.3 * size, t);
-        gSub.gain.linearRampToValueAtTime(0, t + 0.2);
-        sub.start(t); sub.stop(t + 0.2);
+        gSub.gain.setValueAtTime(0.4 * size, t);
+        gSub.gain.linearRampToValueAtTime(0, t + 0.3);
+        sub.start(t); sub.stop(t + 0.3);
 
-        if(type === 3) {
-            const noise = this.ctx.createBufferSource(); noise.buffer = buf;
-            const fHigh = this.ctx.createBiquadFilter(); fHigh.type = 'bandpass'; fHigh.frequency.value = 5000;
-            const gHigh = this.ctx.createGain();
-            noise.connect(fHigh); fHigh.connect(gHigh); gHigh.connect(this.masterGain);
-            gHigh.gain.setValueAtTime(0.2, t);
-            gHigh.gain.linearRampToValueAtTime(0, t + 0.15);
-            noise.start(t);
+        // Noise Layers
+        for(let i = 0; i < 2; i++) {
+            const duration = baseDuration + Math.random() * 0.2;
+            const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * duration, this.ctx.sampleRate);
+            const d = buf.getChannelData(0);
+            for(let j = 0; j < d.length; j++) d[j] = Math.random() * 2 - 1;
+            
+            const src = this.ctx.createBufferSource(); src.buffer = buf;
+            const f = this.ctx.createBiquadFilter(); 
+            f.type = (i === 0) ? 'bandpass' : 'highpass';
+            f.frequency.value = (i === 0) ? (500 + Math.random() * 800) : (1500 + Math.random() * 1500);
+            f.Q.value = 1;
+
+            const g = this.ctx.createGain();
+            src.connect(f); f.connect(g); g.connect(this.masterGain);
+            g.gain.setValueAtTime(0.3 * size * (i===0?1:0.5), t);
+            g.gain.exponentialRampToValueAtTime(0.01, t + duration);
+            src.start(t);
         }
     }
 };
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', {alpha:false});
-let W, H, particles=[];
+let W, H, particles=[], rockets=[];
 function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
 window.addEventListener('resize', resize); resize();
 
@@ -258,6 +288,48 @@ class Particle {
     update(){ this.vx*=0.95; this.vy+=0.2; this.x+=this.vx; this.y+=this.vy; this.life-=this.decay; }
     draw(){ ctx.globalAlpha=Math.max(0,this.life); ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,3,0,6.28); ctx.fill(); }
 }
+
+class Rocket {
+    constructor(startX, startY, targetY, color, shape, explosionCallback) {
+        this.x = startX;
+        this.y = startY;
+        this.targetY = targetY;
+        this.color = color;
+        this.shape = shape;
+        this.explosionCallback = explosionCallback;
+        this.vy = -Math.random() * 3 - 5; 
+        this.trail = [];
+        this.life = 1;
+        this.r = 3;
+    }
+
+    update() {
+        this.y += this.vy;
+        this.vy *= 0.98; 
+        this.trail.push({x: this.x, y: this.y, color: this.color, r: this.r});
+        if (this.trail.length > 10) this.trail.shift();
+
+        if (this.y <= this.targetY) {
+            this.explosionCallback(this.x, this.targetY, this.color, this.shape);
+            this.life = 0; 
+        }
+    }
+
+    draw() {
+        ctx.globalAlpha = this.life;
+        this.trail.forEach(p => {
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
 
 function createExplosion(x,y, cOverride, sOverride){
     const color = cOverride || DATA.selectedColor;
@@ -282,12 +354,30 @@ function createExplosion(x,y, cOverride, sOverride){
     }
 }
 
+function launchFirework(x = W / 2, y = H * 0.3, cOverride, sOverride) {
+    AudioSys.init();
+    AudioSys.playLaunch();
+    const finalColor = cOverride || DATA.selectedColor;
+    const finalShape = sOverride || DATA.selectedShape;
+
+    rockets.push(new Rocket(
+        x + Math.random() * 10 - 5, 
+        H - 50, 
+        y + Math.random() * 100 - 50, 
+        finalColor === 'random' ? `hsl(${Math.random()*360},100%,70%)` : finalColor, 
+        finalShape,
+        createExplosion
+    ));
+}
+
+
 function initUI(){
     loadGame();
     
     const cp = document.getElementById('pad-colors');
     COLORS.forEach(c => {
         const btn = document.createElement('div'); btn.className='btn-pad';
+        if (c.c === 'random') btn.classList.add('random-color');
         btn.innerHTML = `<span>${c.i}</span>`;
         btn.onclick = (e) => { e.stopPropagation(); selectColor(c.c, btn); };
         if(c.c === DATA.selectedColor) btn.classList.add('selected');
@@ -398,7 +488,7 @@ function playSequence(){
             valid = true;
             setTimeout(() => {
                 const tx = W * (0.2 + i*0.2);
-                createExplosion(tx, H*0.4, step.c, step.s);
+                launchFirework(tx, H*0.4, step.c, step.s);
             }, delay);
             delay += 500;
         }
@@ -415,7 +505,11 @@ function updateSeqUI(){
         el.innerHTML = '';
         
         if(data){
-            el.style.backgroundColor = data.c === 'random' ? '#004d4d' : data.c; 
+            if (data.c === 'random') {
+                el.style.background = 'linear-gradient(45deg, #f0f, #0ff, #ff0)';
+            } else {
+                el.style.backgroundColor = data.c;
+            }
             const icon = SHAPES.find(x=>x.id===data.s).i;
             el.innerHTML = `<span class="slot-icon">${icon}</span>`;
         } else {
@@ -431,7 +525,7 @@ function showFloat(txt, x, y, col){
     el.style.left=x+'px'; el.style.top=y+'px'; el.style.color=col;
     document.body.appendChild(el); setTimeout(()=>el.remove(),1000);
 }
-function clearVisuals(){ particles=[]; ctx.fillStyle='black'; ctx.fillRect(0,0,W,H); } 
+function clearVisuals(){ particles=[]; rockets=[]; ctx.fillStyle='black'; ctx.fillRect(0,0,W,H); } 
 
 function saveGame(){ localStorage.setItem('firework_v6', JSON.stringify({m:DATA.money, u:DATA.unlocked})); }
 function loadGame(){
@@ -444,12 +538,12 @@ function loop(){
     ctx.globalCompositeOperation='source-over'; ctx.fillStyle='rgba(5,5,8,0.2)'; ctx.fillRect(0,0,W,H);
     ctx.globalCompositeOperation='lighter';
     for(let i=particles.length-1;i>=0;i--){ particles[i].update(); particles[i].draw(); if(particles[i].life<=0)particles.splice(i,1); }
+    for(let i=rockets.length-1;i>=0;i--){ rockets[i].update(); rockets[i].draw(); if(rockets[i].life<=0)rockets.splice(i,1); }
 }
 
 window.addEventListener('pointerdown', e => {
-    if(e.target.closest('.btn-pad') || e.target.closest('.sequencer-wrapper') || e.target.closest('.btn-clear-canvas') || e.target.closest('.mini-btn')) return;
-    AudioSys.init();
-    if(DATA.recSlot === null) createExplosion(e.clientX, e.clientY);
+    if(e.target.closest('.btn-pad') || e.target.closest('.sequencer-wrapper') || e.target.closest('.btn-clear-canvas') || e.target.closest('.mini-btn') || e.target.closest('#fire-button')) return;
+    // Removido o clique na tela para disparo, agora usa o botão DISPARAR
 });
 
 initUI();
