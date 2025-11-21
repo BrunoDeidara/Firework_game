@@ -3,188 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Firework Station 2.0</title>
+    <title>Firework City Tycoon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #050510;
-            --glass: rgba(255, 255, 255, 0.1);
-            --border: rgba(255, 255, 255, 0.2);
-            --accent: #00d2ff;
+            --bg-top: #0a0a1a;
+            --bg-bot: #1a1a2e;
+            --accent: #ff0055;
+            --gold: #ffcc00;
+            --ui-bg: rgba(255, 255, 255, 0.15);
         }
         body {
             margin: 0;
             overflow: hidden;
-            background-color: var(--bg-color);
-            font-family: 'Segoe UI', sans-serif;
-            touch-action: none; /* Remove zoom no toque */
+            background: linear-gradient(to bottom, var(--bg-top), var(--bg-bot));
+            font-family: 'Fredoka One', cursive;
+            touch-action: none;
+            user-select: none;
         }
-        canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-        }
-        
-        /* UI - Barra Inferior Flutuante */
+        canvas { display: block; }
+
+        /* UI CAMADAS */
         #ui-layer {
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
             display: flex;
-            gap: 15px;
-            padding: 12px 20px;
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            z-index: 10;
-            width: max-content;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
-        .btn {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--border);
-            color: white;
-            padding: 10px 16px;
-            border-radius: 12px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: bold;
+        /* HUD SUPERIOR */
+        .hud {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .money-box {
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: 2px solid var(--gold);
+            color: var(--gold);
+            font-size: 24px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+        }
+        .level-badge {
+            color: white;
+            font-size: 18px;
         }
 
-        .btn:active { transform: scale(0.95); }
-        .btn:hover { background: rgba(255,255,255,0.1); border-color: white; }
+        /* BOTÕES E LOJA */
+        .controls {
+            pointer-events: auto;
+            padding: 20px;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 30px;
+        }
         
-        .btn-primary {
-            background: linear-gradient(135deg, #ff00cc, #333399);
-            border: none;
-            box-shadow: 0 0 15px rgba(255, 0, 204, 0.4);
+        .btn-firework {
+            background: var(--ui-bg);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 15px;
+            min-width: 80px;
+            height: 80px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.1s;
+            position: relative;
         }
-
-        .btn-auto.active {
-            background: #00d2ff;
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.6);
-            color: #000;
-        }
-
-        /* Dica de Mute/Unmute */
-        #mute-hint {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(255,255,255,0.6);
+        .btn-firework:active { transform: scale(0.95); }
+        .btn-firework.locked { opacity: 0.6; filter: grayscale(1); }
+        .btn-firework.selected { border-color: var(--gold); background: rgba(255, 204, 0, 0.2); }
+        
+        .price-tag {
             font-size: 12px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 1s;
+            background: var(--gold);
+            color: black;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-top: 5px;
         }
+
+        /* POPUPS DE TEXTO (Combo, Wow) */
+        .floating-text {
+            position: absolute;
+            color: white;
+            font-size: 20px;
+            pointer-events: none;
+            animation: floatUp 1s forwards;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1); opacity: 0; }
+        }
+
+        /* MODAL DE BOAS VINDAS */
+        #start-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            color: white;
+            text-align: center;
+        }
+        .big-btn {
+            background: linear-gradient(45deg, #ff0055, #ffcc00);
+            border: none;
+            padding: 15px 40px;
+            font-size: 24px;
+            color: white;
+            border-radius: 50px;
+            font-family: inherit;
+            margin-top: 20px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
     </style>
 </head>
 <body>
 
-    <div id="mute-hint">Toque na tela para ativar o áudio</div>
-    
-    <div id="ui-layer">
-        <button class="btn" id="btn-mix">🎨 Misturar</button>
-        <button class="btn btn-auto" id="btn-auto">🚀 Auto</button>
-        <button class="btn btn-primary" id="btn-big">💥 MEGA</button>
-    </div>
-
     <canvas id="canvas"></canvas>
 
+    <div id="ui-layer">
+        <div class="hud">
+            <div class="money-box">💰 <span id="money-display">0</span></div>
+            <div class="level-badge">LOJA DE FOGOS</div>
+        </div>
+
+        <div class="controls" id="shop-container">
+            </div>
+    </div>
+
+    <div id="start-screen">
+        <h1 style="font-size: 40px; color: var(--gold); margin-bottom: 10px;">FIREWORK CITY</h1>
+        <p>Você é o Diretor do Show!</p>
+        <p style="font-size: 14px; opacity: 0.8;">Toque para ganhar dinheiro.<br>Compre cores e formatos novos.</p>
+        <button class="big-btn" onclick="startGame()">COMEÇAR O SHOW</button>
+    </div>
+
 <script>
-/* * FIREWORK STATION 2.0
- * Audio Synthesis + Physics Engine
+/**
+ * FIREWORK CITY TYCOON
+ * Versão 3.0 - Com Economia, Save Game e Desbloqueios
  */
 
-// --- MÓDULO DE ÁUDIO (Sintetizador) ---
+// --- CONFIGURAÇÃO DO JOGO (DATA) ---
+const GAME_DATA = {
+    money: 0,
+    unlocked: ['red'], // IDs dos itens desbloqueados
+    selected: 'red'
+};
+
+// Catálogo da Loja
+const SHOP_ITEMS = [
+    { id: 'red', name: 'Básico Vermelho', color: '#ff3b30', shape: 'circle', price: 0 },
+    { id: 'blue', name: 'Azul Cobalto', color: '#007aff', shape: 'circle', price: 50 },
+    { id: 'gold', name: 'Chuva de Ouro', color: '#ffd700', shape: 'sparkle', price: 150 },
+    { id: 'green', name: 'Estrela Verde', color: '#34c759', shape: 'star', price: 300 },
+    { id: 'purple', name: 'Anel Duplo', color: '#af52de', shape: 'ring', price: 600 },
+    { id: 'mega', name: 'MEGA BOMBA', color: '#ffffff', shape: 'mega', price: 1500 },
+    { id: 'heart', name: 'Amor Rosa', color: '#ff2d55', shape: 'heart', price: 3000 },
+    { id: 'random', name: 'Festa Mista', color: 'random', shape: 'random', price: 5000 }
+];
+
+// --- SISTEMA DE ÁUDIO SINTETIZADO ---
 const AudioSys = {
     ctx: null,
-    enabled: false,
-    
     init() {
-        if (!this.ctx) {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            this.enabled = true;
-            
-            // Cria um buffer de ruído branco (para explosões)
-            const bufferSize = this.ctx.sampleRate * 2; // 2 segundos
-            this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-            const data = this.noiseBuffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = Math.random() * 2 - 1;
-            }
-        }
-        if (this.ctx.state === 'suspended') {
-            this.ctx.resume();
-        }
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
     },
-
-    playLaunch() {
-        if (!this.enabled) return;
+    playPop(vol = 1) {
+        if (!this.ctx) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         
-        // Som de "fiuuu" (Sobe frequência)
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(200, this.ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.5);
+        osc.frequency.setValueAtTime(100 + Math.random()*50, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.1);
         
-        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.2 * vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
         
         osc.start();
-        osc.stop(this.ctx.currentTime + 0.5);
+        osc.stop(this.ctx.currentTime + 0.3);
     },
-
-    playExplosion(size = 1) {
-        if (!this.enabled) return;
-        const src = this.ctx.createBufferSource();
-        src.buffer = this.noiseBuffer;
-        
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 800; // Som abafado de explosão
-
+    playCoin() {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        
-        src.connect(filter);
-        filter.connect(gain);
+        osc.type = 'triangle';
+        osc.connect(gain);
         gain.connect(this.ctx.destination);
-        
-        // Volume baseado no tamanho da explosão
-        const vol = Math.min(0.5, 0.1 * size);
-        const duration = 0.5 + (size * 0.2);
-
-        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
-        
-        src.start();
-        src.stop(this.ctx.currentTime + duration);
+        osc.frequency.setValueAtTime(1200, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(1600, this.ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.2);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.2);
     }
 };
 
-// --- CONFIGURAÇÕES E VARIÁVEIS ---
+// --- ENGINE GRÁFICA ---
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { alpha: false }); // Otimização
 let W, H;
 let particles = [];
-let autoMode = false;
-let lastAutoTime = 0;
 
-// Ajuste de tela
 function resize() {
     W = canvas.width = window.innerWidth;
     H = canvas.height = window.innerHeight;
@@ -192,159 +241,239 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Paleta Neon
-const COLORS = [
-    '#ff0055', '#00ddff', '#ffdd00', '#aa00ff', '#00ff55', '#ffffff', '#ff8800'
-];
-
-// --- SISTEMA DE PARTÍCULAS ---
+// Classe Partícula
 class Particle {
-    constructor(x, y, color, type = 'spark') {
+    constructor(x, y, color, type, speedMulti = 1) {
         this.x = x;
         this.y = y;
         this.color = color;
-        this.type = type;
         
-        // Física inicial
+        // Física
         const angle = Math.random() * Math.PI * 2;
-        // Velocidade aleatória para criar a esfera
-        const speed = Math.random() * (type === 'trail' ? 2 : 15); 
+        let speed = Math.random() * 5 + 2;
         
-        this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed;
-        
-        this.friction = 0.95; // Atrito do ar (segredo do realismo)
-        this.gravity = 0.2;
-        this.alpha = 1;
+        // Comportamentos por tipo
+        this.friction = 0.96;
+        this.gravity = 0.15;
+        this.life = 1.0;
         this.decay = Math.random() * 0.015 + 0.01;
+
+        if (type === 'sparkle') { this.friction = 0.92; speed *= 1.5; }
+        if (type === 'mega') { speed *= 2.5; this.decay = 0.005; }
+
+        this.vx = Math.cos(angle) * speed * speedMulti;
+        this.vy = Math.sin(angle) * speed * speedMulti;
     }
 
     update() {
         this.vx *= this.friction;
         this.vy *= this.friction;
         this.vy += this.gravity;
-        
         this.x += this.vx;
         this.y += this.vy;
-        this.alpha -= this.decay;
+        this.life -= this.decay;
     }
 
-    draw(ctx) {
-        ctx.save();
-        ctx.globalAlpha = this.alpha;
+    draw() {
+        ctx.globalAlpha = Math.max(0, this.life);
         ctx.fillStyle = this.color;
-        
-        // Brilho intenso (Addictive blending)
-        ctx.globalCompositeOperation = 'lighter';
-        
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 2.5, 0, Math.PI * 2);
         ctx.fill();
-        
-        ctx.restore();
     }
 }
 
-// --- LÓGICA DE EXPLOSÃO ---
-function explode(x, y, colorOverride = null, size = 1) {
-    const color = colorOverride || COLORS[Math.floor(Math.random() * COLORS.length)];
-    const particleCount = 80 * size;
+// Gerador de Formatos
+function createExplosion(x, y, item) {
+    const color = item.color === 'random' ? `hsl(${Math.random()*360}, 100%, 50%)` : item.color;
+    const shape = item.shape === 'random' ? ['circle','star','ring'][Math.floor(Math.random()*3)] : item.shape;
     
-    AudioSys.playExplosion(size);
+    // Som
+    AudioSys.playPop(shape === 'mega' ? 3 : 1);
 
-    for (let i = 0; i < particleCount; i++) {
-        const p = new Particle(x, y, color);
-        
-        // Modificadores para variar os formatos
-        if(size > 1.5) { 
-            p.vx *= 1.5; p.vy *= 1.5; // Explosão maior
+    // Recompensa em dinheiro
+    addMoney(shape === 'mega' ? 15 : 5);
+    showFloatingText(`+$${shape === 'mega' ? 15 : 5}`, x, y - 50);
+
+    // Lógica dos formatos
+    if (shape === 'circle' || shape === 'sparkle' || shape === 'random') {
+        for(let i=0; i<60; i++) particles.push(new Particle(x, y, color, shape));
+    }
+    else if (shape === 'mega') {
+        for(let i=0; i<200; i++) particles.push(new Particle(x, y, color, shape));
+        // Flash branco
+        ctx.fillStyle = 'white'; ctx.globalAlpha = 0.5; ctx.fillRect(0,0,W,H);
+    }
+    else if (shape === 'star') {
+        for(let i=0; i<80; i++) {
+            const p = new Particle(x, y, color, 'circle');
+            // Matemática da estrela (simplificada para velocidade)
+            const a = (i / 80) * Math.PI * 2;
+            const r = (i % 2 === 0) ? 3 : 8; // Pontas
+            p.vx = Math.cos(a) * r; p.vy = Math.sin(a) * r;
+            particles.push(p);
         }
-        particles.push(p);
+    }
+    else if (shape === 'ring') {
+        for(let i=0; i<80; i++) {
+            const p = new Particle(x, y, color, 'circle');
+            const a = (i / 80) * Math.PI * 2;
+            const s = 6;
+            p.vx = Math.cos(a) * s; p.vy = Math.sin(a) * s;
+            particles.push(p);
+        }
+    }
+    else if (shape === 'heart') {
+        for (let i = 0; i < 80; i++) {
+            const t = (i / 80) * Math.PI * 2;
+            const xx = 16 * Math.pow(Math.sin(t), 3);
+            const yy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+            const p = new Particle(x, y, color, 'circle');
+            p.vx = xx * 0.3; p.vy = -yy * 0.3;
+            particles.push(p);
+        }
     }
 }
 
-function launchFirework(targetX, targetY, color) {
-    // Simulando o lançamento (simplificado: cria o som e agenda a explosão)
-    AudioSys.playLaunch();
-    
-    // Delay visual para "chegar" ao topo (opcional, aqui fiz instantâneo para arcade feel)
-    // Mas vamos fazer um pequeno delay aleatório para o modo auto ficar natural
-    setTimeout(() => {
-        explode(targetX, targetY, color, 1);
-    }, 100); // Pequeno atraso para sincronizar com o pico do som
-}
-
-// --- LOOP DO JOGO ---
+// --- LOOP PRINCIPAL ---
 function loop() {
-    // Efeito de rastro: desenha um fundo semitransparente
+    requestAnimationFrame(loop);
+
+    // Fundo com efeito rastro e cidade
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = 'rgba(5, 5, 16, 0.2)'; 
+    ctx.fillStyle = 'rgba(10, 10, 26, 0.2)'; // Rastro
     ctx.fillRect(0, 0, W, H);
 
-    // Atualiza e desenha partículas
+    // Desenhar Cidade (Cityline Simples)
+    ctx.fillStyle = '#050510';
+    ctx.fillRect(0, H - 50, W, 50);
+    // Prédios simples
+    for(let i=0; i<W; i+=40) {
+        const h = Math.sin(i)*20 + 60;
+        ctx.fillRect(i, H-h, 42, h);
+    }
+
+    // Partículas
+    ctx.globalCompositeOperation = 'lighter';
     for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.update();
-        p.draw(ctx);
-        if (p.alpha <= 0) particles.splice(i, 1);
+        particles[i].update();
+        particles[i].draw();
+        if (particles[i].life <= 0) particles.splice(i, 1);
     }
-
-    // Modo Automático
-    if (autoMode) {
-        const now = Date.now();
-        if (now - lastAutoTime > 800) { // A cada 800ms
-            const x = Math.random() * W * 0.8 + W * 0.1;
-            const y = Math.random() * H * 0.5 + H * 0.1;
-            launchFirework(x, y, null);
-            lastAutoTime = now;
-        }
-    }
-
-    requestAnimationFrame(loop);
 }
 
-// --- CONTROLES E INTERAÇÃO ---
-canvas.addEventListener('pointerdown', (e) => {
-    AudioSys.init(); // Ativa audio no primeiro clique
-    explode(e.clientX, e.clientY);
-});
-
-// Botão Mix (Cor Aleatória Especial)
-document.getElementById('btn-mix').addEventListener('click', (e) => {
-    e.stopPropagation();
+// --- UI & GAMEPLAY ---
+function startGame() {
+    document.getElementById('start-screen').style.display = 'none';
     AudioSys.init();
-    const x = W / 2;
-    const y = H / 3;
-    // Explosão dupla
-    explode(x, y, '#fff', 1);
-    setTimeout(() => explode(x, y, '#ff0055', 1.2), 150);
+    loadGame();
+    renderShop();
+    loop();
+}
+
+function addMoney(amount) {
+    GAME_DATA.money += amount;
+    updateHUD();
+    saveGame();
+    if(Math.random() > 0.7) AudioSys.playCoin();
+}
+
+function updateHUD() {
+    const el = document.getElementById('money-display');
+    // Efeito visual de contar dinheiro
+    el.innerText = GAME_DATA.money;
+}
+
+function showFloatingText(text, x, y) {
+    const el = document.createElement('div');
+    el.className = 'floating-text';
+    el.innerText = text;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    // Cor dinâmica baseada no contexto
+    if(text.includes('!')) el.style.color = '#ffcc00';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+}
+
+// Renderiza a Loja
+function renderShop() {
+    const container = document.getElementById('shop-container');
+    container.innerHTML = '';
+
+    SHOP_ITEMS.forEach(item => {
+        const btn = document.createElement('div');
+        const unlocked = GAME_DATA.unlocked.includes(item.id);
+        
+        btn.className = `btn-firework ${unlocked ? '' : 'locked'} ${GAME_DATA.selected === item.id ? 'selected' : ''}`;
+        
+        // Conteúdo Visual do Botão
+        let icon = '●';
+        if(item.shape === 'star') icon = '★';
+        if(item.shape === 'heart') icon = '♥';
+        if(item.shape === 'ring') icon = '◎';
+        if(item.shape === 'mega') icon = '☀';
+
+        btn.innerHTML = `
+            <span style="font-size: 24px; color: ${item.color === 'random' ? 'white' : item.color}">${icon}</span>
+            <span style="font-size: 10px; margin-top:5px">${unlocked ? item.name : 'Bloqueado'}</span>
+            ${!unlocked ? `<div class="price-tag">$${item.price}</div>` : ''}
+        `;
+
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            if (unlocked) {
+                GAME_DATA.selected = item.id;
+                renderShop(); // Atualiza seleção visual
+                AudioSys.playCoin(); // Som de click
+            } else {
+                if (GAME_DATA.money >= item.price) {
+                    // Comprar
+                    GAME_DATA.money -= item.price;
+                    GAME_DATA.unlocked.push(item.id);
+                    GAME_DATA.selected = item.id;
+                    AudioSys.playCoin();
+                    showFloatingText("COMPRADO!", e.clientX, e.clientY);
+                    saveGame();
+                    renderShop();
+                    updateHUD();
+                } else {
+                    // Sem dinheiro
+                    showFloatingText("Dinheiro insuficiente!", e.clientX, e.clientY);
+                    btn.style.transform = "translateX(5px)";
+                    setTimeout(()=> btn.style.transform = "none", 100);
+                }
+            }
+        };
+
+        container.appendChild(btn);
+    });
+}
+
+// --- PERSISTÊNCIA (SAVE) ---
+function saveGame() {
+    localStorage.setItem('firework_tycoon_v1', JSON.stringify(GAME_DATA));
+}
+
+function loadGame() {
+    const saved = localStorage.getItem('firework_tycoon_v1');
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        // Merge seguro caso adicionemos itens novos no futuro
+        GAME_DATA.money = parsed.money || 0;
+        GAME_DATA.unlocked = parsed.unlocked || ['red'];
+    }
+    updateHUD();
+}
+
+// Input Global
+window.addEventListener('pointerdown', (e) => {
+    // Ignora cliques na UI
+    if (e.target.closest('#ui-layer')) return;
+    
+    const currentItem = SHOP_ITEMS.find(i => i.id === GAME_DATA.selected);
+    createExplosion(e.clientX, e.clientY, currentItem);
 });
-
-// Botão Mega
-document.getElementById('btn-big').addEventListener('click', (e) => {
-    e.stopPropagation();
-    AudioSys.init();
-    explode(W/2, H/2, '#ffd700', 2.5); // Explosão gigante dourada
-});
-
-// Botão Auto
-const btnAuto = document.getElementById('btn-auto');
-btnAuto.addEventListener('click', (e) => {
-    e.stopPropagation();
-    AudioSys.init();
-    autoMode = !autoMode;
-    btnAuto.classList.toggle('active');
-});
-
-// Iniciar
-loop();
-
-// Aviso de som
-setTimeout(() => {
-    const hint = document.getElementById('mute-hint');
-    hint.style.opacity = 1;
-    setTimeout(() => hint.style.opacity = 0, 4000);
-}, 1000);
 
 </script>
 </body>
