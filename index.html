@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
-    <title>Firework Tycoon V8.2</title>
+    <title>Firework Tycoon V8.3</title>
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -295,7 +295,8 @@ class Rocket {
         this.color = color;
         this.shape = shape;
         this.explosionCallback = explosionCallback;
-        this.vy = -Math.random() * 3 - 5; 
+        // CORREÇÃO V8.3: Aumenta a velocidade inicial para garantir que o foguete suba mais rápido
+        this.vy = -Math.random() * 4 - 6; 
         this.trail = [];
         this.life = 1;
         this.r = 3;
@@ -308,30 +309,25 @@ class Rocket {
         this.trail.push({x: this.x, y: this.y, color: this.color, r: this.r});
         if (this.trail.length > 10) this.trail.shift();
 
-        // CORREÇÃO: Força a explosão se atingir o alvo OU se perder o impulso de subida
+        // Condição de explosão: se atingir o alvo OU se perder o impulso de subida
         const shouldExplode = this.y <= this.targetY || (Math.abs(this.vy) < 0.1 && this.y < H * 0.9);
 
         if (shouldExplode) {
-            // Garante que a explosão ocorra no ponto mais alto alcançado
             this.explosionCallback(this.x, Math.min(this.y, this.targetY), this.color, this.shape);
             this.life = 0; 
         }
     }
 
     draw() {
-        // Desenha o corpo do foguete (apenas se estiver vivo)
         if(this.life > 0) {
-            // Desenha o rastro, ajustando a opacidade para que desapareça rápido
             ctx.globalAlpha = 0.5; 
             this.trail.forEach(p => {
                 ctx.fillStyle = p.color;
                 ctx.beginPath();
-                // O rastro diminui de tamanho rapidamente para sumir
                 ctx.arc(p.x, p.y, p.r * 0.5 * (p.r / this.r), 0, Math.PI * 2); 
                 ctx.fill();
             });
 
-            // Desenha a cabeça do foguete
             ctx.globalAlpha = 1;
             ctx.fillStyle = this.color;
             ctx.beginPath();
@@ -553,14 +549,22 @@ function loadGame(){
 
 function loop(){
     requestAnimationFrame(loop);
-    // Limpeza suave: Corrigido para garantir que o rastro desapareça. Aumentei a opacidade levemente.
+    
     ctx.globalCompositeOperation='source-over'; 
-    ctx.fillStyle='rgba(5,5,8,0.3)'; // Opacidade ligeiramente maior
+    ctx.fillStyle='rgba(5,5,8,0.3)'; 
     ctx.fillRect(0,0,W,H);
     ctx.globalCompositeOperation='lighter';
     
     for(let i=particles.length-1;i>=0;i--){ particles[i].update(); particles[i].draw(); if(particles[i].life<=0)particles.splice(i,1); }
-    for(let i=rockets.length-1;i>=0;i--){ rockets[i].update(); rockets[i].draw(); if(rockets[i].life<=0)rockets.splice(i,1); }
+    
+    // CORREÇÃO V8.3: Itera sobre os foguetes de trás para frente e remove APENAS aqueles com life <= 0 (já explodidos)
+    for(let i=rockets.length-1;i>=0;i--){ 
+        rockets[i].update(); 
+        rockets[i].draw(); 
+        if(rockets[i].life<=0) {
+            rockets.splice(i,1);
+        }
+    }
 }
 
 window.addEventListener('pointerdown', e => {
