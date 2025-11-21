@@ -1,296 +1,351 @@
-<!doctype html>
-<html lang="pt-br">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<title>Fogos para Crianças — Web</title>
-<meta name="theme-color" content="#090c1c" />
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-180.png" sizes="180x180">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<style>
-  :root { --panel-w: 132px; --gap: 8px; --btn-h: 56px; --vh: 1vh; }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; padding: 0; height: 100%; background:#090c1c; color:#eef2ff; touch-action: manipulation; font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif; overflow: hidden; }
-  #wrap { position: relative; width: 100%; height: calc(var(--vh) * 100); overflow: hidden; }
-  @supports (height: 100dvh) { #wrap { height: 100dvh; } }
-  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Firework Station 2.0</title>
+    <style>
+        :root {
+            --bg-color: #050510;
+            --glass: rgba(255, 255, 255, 0.1);
+            --border: rgba(255, 255, 255, 0.2);
+            --accent: #00d2ff;
+        }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', sans-serif;
+            touch-action: none; /* Remove zoom no toque */
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        /* UI - Barra Inferior Flutuante */
+        #ui-layer {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            padding: 12px 20px;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            z-index: 10;
+            width: max-content;
+        }
 
-  #panel {
-    position: absolute; left: max(6px, env(safe-area-inset-left, 0)); top: max(6px, env(safe-area-inset-top, 0));
-    width: calc(var(--panel-w) + var(--gap)*2);
-    padding: var(--gap);
-    display: flex; flex-direction: column; gap: var(--gap);
-    z-index: 2;
-  }
-  #mix { width: 100%; height: 40px; border-radius: 12px; border:2px solid #e5e7eb; background:#fff; }
-  .slots { display: grid; grid-template-rows: repeat(3, 34px); gap: var(--gap); }
-  .slot { height: 34px; border-radius: 10px; border:2px solid #e5e7eb; background:#fff; cursor: pointer; }
-  .slot.active { outline: 3px solid #50a6ff; }
-  .palette { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); width: 100%; }
-  .swatch { width: 100%; aspect-ratio: 1/1; border-radius: 10px; border:2px solid #e5e7eb; cursor: pointer; }
+        .btn {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-  #buttons {
-    position: absolute; left: 50%; transform: translateX(-50%);
-    bottom: calc(env(safe-area-inset-bottom, 0) + 10px);
-    display: flex; gap: 10px; z-index: 2; padding: 0 10px;
-    width: 100%; justify-content: center;
-  }
-  .btn { min-width: 140px; height: var(--btn-h); border-radius: 16px; border:2px solid #e5e7eb;
-    background:#fff; color:#1f2937; font-weight:600; font-size: 16px;
-    display:flex; align-items:center; justify-content:center; padding: 0 14px;
-    cursor: pointer; user-select: none; }
-  .btn:active { transform: translateY(1px); }
-  .btn.colorido { background:#f8fafc; }
-  .btn.surpresa { background: linear-gradient(90deg,#ff3b30,#ff9500,#ffdd00,#34c759,#00c8ff,#007aff,#5856d6,#ba55d3,#ff2d55,#ff00aa);
-    color:#0b0f1a; border-color:#ffffffcc; }
-  @media (max-width: 380px) { :root { --panel-w: 120px; --btn-h: 52px; } .btn { min-width: 120px; font-size: 15px; } }
-</style>
+        .btn:active { transform: scale(0.95); }
+        .btn:hover { background: rgba(255,255,255,0.1); border-color: white; }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ff00cc, #333399);
+            border: none;
+            box-shadow: 0 0 15px rgba(255, 0, 204, 0.4);
+        }
+
+        .btn-auto.active {
+            background: #00d2ff;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.6);
+            color: #000;
+        }
+
+        /* Dica de Mute/Unmute */
+        #mute-hint {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+    </style>
 </head>
 <body>
-<div id="wrap">
-  <canvas id="sky"></canvas>
 
-  <div id="panel">
-    <div id="mix"></div>
-    <div class="slots">
-      <div class="slot" id="slot1"></div>
-      <div class="slot" id="slot2"></div>
-      <div class="slot" id="slot3"></div>
+    <div id="mute-hint">Toque na tela para ativar o áudio</div>
+    
+    <div id="ui-layer">
+        <button class="btn" id="btn-mix">🎨 Misturar</button>
+        <button class="btn btn-auto" id="btn-auto">🚀 Auto</button>
+        <button class="btn btn-primary" id="btn-big">💥 MEGA</button>
     </div>
-    <div class="palette" id="palette"></div>
-  </div>
 
-  <div id="buttons">
-    <div class="btn" id="btn3">Estourar 3x</div>
-    <div class="btn colorido" id="btnColorido">Colorido</div>
-    <div class="btn surpresa" id="btnSurpresa">Surpresa</div>
-  </div>
-</div>
+    <canvas id="canvas"></canvas>
 
 <script>
-(()=> {
-  const canvas = document.getElementById('sky');
-  const ctx = canvas.getContext('2d');
-  let W=1, H=1, DPR=1;
+/* * FIREWORK STATION 2.0
+ * Audio Synthesis + Physics Engine
+ */
 
-  function setVHVar() {
-    const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
-    document.documentElement.style.setProperty('--vh', `${h/100}px`);
-  }
-  function resize() {
-    setVHVar();
-    const rect = canvas.getBoundingClientRect();
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
-    W = Math.max(1, Math.floor(rect.width  * DPR));
-    H = Math.max(1, Math.floor(rect.height * DPR));
-    canvas.width = W; canvas.height = H;
-  }
-  window.addEventListener('resize', resize);
-  window.addEventListener('orientationchange', resize);
-  if (window.visualViewport) {
-    visualViewport.addEventListener('resize', resize);
-    visualViewport.addEventListener('scroll', resize);
-  }
-  document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) setTimeout(resize, 0); });
-  setTimeout(resize, 0);
+// --- MÓDULO DE ÁUDIO (Sintetizador) ---
+const AudioSys = {
+    ctx: null,
+    enabled: false,
+    
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.enabled = true;
+            
+            // Cria um buffer de ruído branco (para explosões)
+            const bufferSize = this.ctx.sampleRate * 2; // 2 segundos
+            this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = this.noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    },
 
-  // ===== 12 CORES BEM VIVAS =====
-  const PALETTE = [
-    [255,59,48],   // vermelho
-    [255,149,0],   // laranja
-    [255,221,0],   // amarelo
-    [52,199,89],   // verde-lima
-    [0,200,255],   // ciano vivo
-    [0,122,255],   // azul
-    [88,86,214],   // índigo
-    [186,85,211],  // violeta
-    [255,45,85],   // rosa choque
-    [255,0,170],   // magenta
-    [255,215,0],   // dourado
-    [255,255,255]  // branco
-  ];
+    playLaunch() {
+        if (!this.enabled) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        // Som de "fiuuu" (Sobe frequência)
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.5);
+        
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+        
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.5);
+    },
 
-  // Monta paleta 3 colunas
-  const paletteEl = document.getElementById('palette');
-  PALETTE.forEach((rgb)=> {
-    const sw = document.createElement('div');
-    sw.className='swatch';
-    sw.style.backgroundColor = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    sw.addEventListener('click', ()=>{ setSlot(activeSlot, rgb); }, {passive:true});
-    paletteEl.appendChild(sw);
-  });
+    playExplosion(size = 1) {
+        if (!this.enabled) return;
+        const src = this.ctx.createBufferSource();
+        src.buffer = this.noiseBuffer;
+        
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 800; // Som abafado de explosão
 
-  const slots = [ document.getElementById('slot1'), document.getElementById('slot2'), document.getElementById('slot3') ];
-  let slotColors = [ PALETTE[0], PALETTE[5], PALETTE[2] ];
-  let activeSlot = 0;
-  slots.forEach((el, idx)=> el.addEventListener('click', ()=> selectSlot(idx), {passive:true}));
-  const mixEl = document.getElementById('mix');
+        const gain = this.ctx.createGain();
+        
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        // Volume baseado no tamanho da explosão
+        const vol = Math.min(0.5, 0.1 * size);
+        const duration = 0.5 + (size * 0.2);
 
-  function selectSlot(i) { activeSlot = i; slots.forEach((el, k)=> el.classList.toggle('active', k===i)); }
-  function setSlot(i, rgb) { slotColors[i] = rgb.slice(); renderSlots(); renderMix(); }
-  function renderSlots() { slots.forEach((el, i)=>{ const c = slotColors[i]; el.style.backgroundColor = `rgb(${c[0]},${c[1]},${c[2]})`; }); }
-  function avgColor(colors) { const n = colors.length || 1; let r=0,g=0,b=0; colors.forEach(c=>{ r+=c[0]; g+=c[1]; b+=c[2]; }); return [Math.round(r/n),Math.round(g/n),Math.round(b/n)]; }
-  function renderMix() { const used = slotColors.filter(Boolean); const m = avgColor(used); mixEl.style.backgroundColor = `rgb(${m[0]},${m[1]},${m[2]})`; return m; }
-  selectSlot(0); renderSlots(); renderMix();
-
-  // ===== Partículas / Util =====
-  const particles = [];
-  function rnd(a,b){ return a + Math.random()*(b-a); }
-  function addParticle(x,y,vx,vy,color,life,size,fade=1){ particles.push({x,y,vx,vy,color,life,age:0,size,fade}); }
-
-  // ===== PADRÕES (10 no total) =====
-  function pattern_burst(x,y,color){
-    const n=150;
-    for(let i=0;i<n;i++){
-      const ang = (i/n)*Math.PI*2 + rnd(-0.05,0.05);
-      const sp  = rnd(140,270);
-      addParticle(x,y, Math.cos(ang)*sp, Math.sin(ang)*sp, color, rnd(0.9,1.4), rnd(1.8,3));
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        
+        src.start();
+        src.stop(this.ctx.currentTime + duration);
     }
-  }
-  function pattern_ring(x,y,color){
-    const n=180, sp=240;
-    for(let i=0;i<n;i++){
-      const ang = (i/n)*Math.PI*2;
-      addParticle(x,y, Math.cos(ang)*sp, Math.sin(ang)*sp, color, 1.1, 2.2);
-    }
-  }
-  function pattern_double_ring(x,y,color){
-    const n=180;
-    const speeds=[180,300];
-    for(const sp of speeds){
-      for(let i=0;i<n;i++){
-        const ang = (i/n)*Math.PI*2;
-        addParticle(x,y, Math.cos(ang)*sp, Math.sin(ang)*sp, color, 1.2, 2.2);
-      }
-    }
-  }
-  function pattern_star(x,y,color){
-    const spikes=30;
-    for(let i=0;i<spikes;i++){
-      const ang = (i/spikes)*Math.PI*2;
-      const r = (i%2===0)? 270:130;
-      addParticle(x,y, Math.cos(ang)*r, Math.sin(ang)*r, color, 1.2, 2.6);
-    }
-  }
-  function pattern_flower(x,y,color){
-    const n=200, k=6;
-    for(let i=0;i<n;i++){
-      const ang=(i/n)*Math.PI*2;
-      const r = 200 * (1 + 0.35*Math.sin(k*ang));
-      addParticle(x,y, Math.cos(ang)*r, Math.sin(ang)*r, color, 1.2, 2.4);
-    }
-  }
-  function pattern_heart(x,y,color){
-    const n=200;
-    for(let i=0;i<n;i++){
-      const t=(i/n)*Math.PI*2;
-      const px = 16*Math.sin(t)**3;
-      const py = 13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);
-      const s=13;
-      addParticle(x,y, px*s, -py*s, color, 1.3, 2.6);
-    }
-  }
-  function pattern_spiral(x,y,color){
-    const n=160;
-    for(let i=0;i<n;i++){
-      const ang = (i/22)+i*0.035;
-      const r= 30 + i*1.2;
-      addParticle(x,y, Math.cos(ang)*r*3, Math.sin(ang)*r*3, color, 1.4, 2.2);
-    }
-  }
-  function pattern_chrysanthemum(x,y,color){
-    const n=260;
-    for(let i=0;i<n;i++){
-      const ang=(i/n)*Math.PI*2;
-      const sp=rnd(180,320);
-      const tail=rnd(0.6,1);
-      addParticle(x,y, Math.cos(ang)*sp, Math.sin(ang)*sp, color, 1.5, 2.2, tail);
-    }
-  }
-  function pattern_cross(x,y,color){
-    const dirs=[[1,0],[-1,0],[0,1],[0,-1],[Math.SQRT1_2,Math.SQRT1_2],[-Math.SQRT1_2,Math.SQRT1_2],[Math.SQRT1_2,-Math.SQRT1_2],[-Math.SQRT1_2,-Math.SQRT1_2]];
-    for(const [dx,dy] of dirs){
-      for(let s=80;s<=320;s+=16){
-        addParticle(x,y, dx*s, dy*s, color, 1.2, 2.4);
-      }
-    }
-  }
-  function pattern_spider(x,y,color){
-    const legs=16;
-    for(let i=0;i<legs;i++){
-      const ang=(i/legs)*Math.PI*2+rnd(-0.06,0.06);
-      const sp=rnd(260,360);
-      for(let t=0;t<10;t++){
-        const k=sp*(t/10);
-        addParticle(x,y, Math.cos(ang)*k, Math.sin(ang)*k, color, 1.3, 2.2);
-      }
-    }
-  }
+};
 
-  const PATTERNS = [pattern_burst, pattern_ring, pattern_double_ring, pattern_star, pattern_flower, pattern_heart, pattern_spiral, pattern_chrysanthemum, pattern_cross, pattern_spider];
+// --- CONFIGURAÇÕES E VARIÁVEIS ---
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+let particles = [];
+let autoMode = false;
+let lastAutoTime = 0;
 
-  function fireAtColor(color){
-    const x = Math.random()*W*0.7 + W*0.25;
-    const y = Math.random()*H*0.45 + H*0.1;
-    const p = PATTERNS[(Math.random()*PATTERNS.length)|0];
-    p(x,y,color);
-  }
-  function fireMixedOnce(){ fireAtColor(renderMix()); }
-  function fireMixedThree(){ fireMixedOnce(); fireMixedOnce(); fireMixedOnce(); }
-  function fireThreeSelected(){ slotColors.forEach(c=> fireAtColor(c)); }
-  function fireRandomThree(){ for(let i=0;i<3;i++){ const c = PALETTE[(Math.random()*PALETTE.length)|0]; fireAtColor(c); } }
+// Ajuste de tela
+function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
 
-  document.getElementById('btn3').addEventListener('click', fireMixedThree, {passive:true});
-  document.getElementById('btnColorido').addEventListener('click', fireThreeSelected, {passive:true});
-  document.getElementById('btnSurpresa').addEventListener('click', fireRandomThree, {passive:true});
+// Paleta Neon
+const COLORS = [
+    '#ff0055', '#00ddff', '#ffdd00', '#aa00ff', '#00ff55', '#ffffff', '#ff8800'
+];
 
-  // Céu + animação
-  function drawBackground(){
-    const g = ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'#0b1026'); g.addColorStop(1,'#050813');
-    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    ctx.globalAlpha = 0.7;
-    for(let i=0;i<80;i++){
-      const x = (i*9973)%W, y = (i*7331)%(H*0.6)+5;
-      ctx.fillStyle = (i%9===0)? '#fff':'#cbd5e1';
-      ctx.fillRect(x, y, 1, 1);
+// --- SISTEMA DE PARTÍCULAS ---
+class Particle {
+    constructor(x, y, color, type = 'spark') {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.type = type;
+        
+        // Física inicial
+        const angle = Math.random() * Math.PI * 2;
+        // Velocidade aleatória para criar a esfera
+        const speed = Math.random() * (type === 'trail' ? 2 : 15); 
+        
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        
+        this.friction = 0.95; // Atrito do ar (segredo do realismo)
+        this.gravity = 0.2;
+        this.alpha = 1;
+        this.decay = Math.random() * 0.015 + 0.01;
     }
-    ctx.globalAlpha = 1;
-  }
 
-  const gravity = 140;
-  function step(){
-    drawBackground();
-    const next=[];
-    for(let i=0;i<particles.length;i++){
-      const p=particles[i];
-      p.age+=1/60;
-      p.vy+=gravity*(1/60);
-      p.x+=p.vx*(1/60);
-      p.y+=p.vy*(1/60);
-      const lifeRatio=Math.max(0,1-p.age/p.life)*p.fade;
-      if(lifeRatio>0){
-        ctx.globalAlpha=lifeRatio;
-        ctx.fillStyle=`rgb(${p.color[0]},${p.color[1]},${p.color[2]})`;
-        ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
-        next.push(p);
-      }
+    update() {
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        this.vy += this.gravity;
+        
+        this.x += this.vx;
+        this.y += this.vy;
+        this.alpha -= this.decay;
     }
-    particles.length=0; Array.prototype.push.apply(particles,next);
-    requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
 
-  canvas.addEventListener('touchmove', e=> e.preventDefault(), {passive:false});
+    draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        
+        // Brilho intenso (Addictive blending)
+        ctx.globalCompositeOperation = 'lighter';
+        
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+}
 
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(console.error);
-    });
-  }
-})();
+// --- LÓGICA DE EXPLOSÃO ---
+function explode(x, y, colorOverride = null, size = 1) {
+    const color = colorOverride || COLORS[Math.floor(Math.random() * COLORS.length)];
+    const particleCount = 80 * size;
+    
+    AudioSys.playExplosion(size);
+
+    for (let i = 0; i < particleCount; i++) {
+        const p = new Particle(x, y, color);
+        
+        // Modificadores para variar os formatos
+        if(size > 1.5) { 
+            p.vx *= 1.5; p.vy *= 1.5; // Explosão maior
+        }
+        particles.push(p);
+    }
+}
+
+function launchFirework(targetX, targetY, color) {
+    // Simulando o lançamento (simplificado: cria o som e agenda a explosão)
+    AudioSys.playLaunch();
+    
+    // Delay visual para "chegar" ao topo (opcional, aqui fiz instantâneo para arcade feel)
+    // Mas vamos fazer um pequeno delay aleatório para o modo auto ficar natural
+    setTimeout(() => {
+        explode(targetX, targetY, color, 1);
+    }, 100); // Pequeno atraso para sincronizar com o pico do som
+}
+
+// --- LOOP DO JOGO ---
+function loop() {
+    // Efeito de rastro: desenha um fundo semitransparente
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(5, 5, 16, 0.2)'; 
+    ctx.fillRect(0, 0, W, H);
+
+    // Atualiza e desenha partículas
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.update();
+        p.draw(ctx);
+        if (p.alpha <= 0) particles.splice(i, 1);
+    }
+
+    // Modo Automático
+    if (autoMode) {
+        const now = Date.now();
+        if (now - lastAutoTime > 800) { // A cada 800ms
+            const x = Math.random() * W * 0.8 + W * 0.1;
+            const y = Math.random() * H * 0.5 + H * 0.1;
+            launchFirework(x, y, null);
+            lastAutoTime = now;
+        }
+    }
+
+    requestAnimationFrame(loop);
+}
+
+// --- CONTROLES E INTERAÇÃO ---
+canvas.addEventListener('pointerdown', (e) => {
+    AudioSys.init(); // Ativa audio no primeiro clique
+    explode(e.clientX, e.clientY);
+});
+
+// Botão Mix (Cor Aleatória Especial)
+document.getElementById('btn-mix').addEventListener('click', (e) => {
+    e.stopPropagation();
+    AudioSys.init();
+    const x = W / 2;
+    const y = H / 3;
+    // Explosão dupla
+    explode(x, y, '#fff', 1);
+    setTimeout(() => explode(x, y, '#ff0055', 1.2), 150);
+});
+
+// Botão Mega
+document.getElementById('btn-big').addEventListener('click', (e) => {
+    e.stopPropagation();
+    AudioSys.init();
+    explode(W/2, H/2, '#ffd700', 2.5); // Explosão gigante dourada
+});
+
+// Botão Auto
+const btnAuto = document.getElementById('btn-auto');
+btnAuto.addEventListener('click', (e) => {
+    e.stopPropagation();
+    AudioSys.init();
+    autoMode = !autoMode;
+    btnAuto.classList.toggle('active');
+});
+
+// Iniciar
+loop();
+
+// Aviso de som
+setTimeout(() => {
+    const hint = document.getElementById('mute-hint');
+    hint.style.opacity = 1;
+    setTimeout(() => hint.style.opacity = 0, 4000);
+}, 1000);
+
 </script>
 </body>
 </html>
